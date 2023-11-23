@@ -28,7 +28,7 @@ pub struct Renderer {
 
 impl Renderer {
     pub fn new() -> Result<Renderer, RenderError> {
-        let mut r = Renderer {
+        let r = Renderer {
             on_scree_buf: vec![],
             pre_render_buf: vec![],
             vw: 0,
@@ -104,11 +104,23 @@ impl Renderer {
                 self.detect_layout()?;
                 let buf_len = self.vw * self.vh;
                 if buf_len != self.pre_render_buf.len() {
-                    self.pre_render_buf.resize(buf_len, ' ');
+                    self.pre_render_buf.resize(buf_len, '\0');
                 }
                 if buf_len != self.on_scree_buf.len() {
                     self.on_scree_buf.resize(buf_len, ' ');
                 }
+
+                // clear screen
+                let mut stdout = stdout();
+                stdout.queue(MoveTo(self.y as u16, self.x as u16)).map_term_err()?;
+                for i in 0..self.vh {
+                    for j in 0..self.vw {
+                        stdout.queue(Print(' ')).map_term_err()?;
+                    }
+                    stdout.queue(MoveTo(0u16, (self.x + i) as u16)).map_term_err()?;
+                }
+                stdout.queue(MoveTo(self.y as u16, self.x as u16)).map_term_err()?;
+                stdout.flush().map_term_err()?;
             }
         }
         self.fill_pre_render()?;
@@ -126,13 +138,15 @@ impl Renderer {
 
     fn fill_pre_render(&mut self) -> Result<(), RenderError> {
         // clear first
-        self.pre_render_buf.fill(' ');
+        self.pre_render_buf.fill('\0');
 
         for i in 0..self.vh {
             for j in 0..self.vw {
-                let flag = (i + j) & 1;
-                let c = if flag == 0 { 'o' } else { '-' };
-                // self.pre_render_buf[i * self.w + j] = c;
+                let flag = (i + j) % 5 == 0;
+                if !flag {
+                    continue;
+                }
+                let c = '💩';
                 #[cfg(debug_assertions)]
                 assert!(i * self.vw + j < self.pre_render_buf.len());
                 let x = unsafe { self.pre_render_buf.get_unchecked_mut(i * self.vw + j) };
@@ -209,7 +223,7 @@ impl Renderer {
         self.pw = w;
         self.ph = h;
         let (old_w, old_h) = (self.vw, self.vh);
-        let border = 2usize;
+        let border = 5usize;
         self.vw = max(w, border) - border;
         self.vh = max(h, border) - border;
         // self.vw = min(self.vw, 120);
