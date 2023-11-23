@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 term_size = "0.3.2"
+crossterm = "0.27.0"
+tokio = { version = "1.0.0", features = ["rt", "rt-multi-thread", "macros"] }
